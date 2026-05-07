@@ -110,7 +110,7 @@ def create_token(uid: str, nombre: str, rol: str) -> str:
         "nombre": nombre,
         "rol": rol,
         "empresa": EMPRESA_ID,
-        "exp": datetime.utcnow() + timedelta(hours=12),
+        "exp": datetime.utcnow() + timedelta(days=30),
     }
     return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
@@ -214,19 +214,14 @@ async def health():
         "ts": datetime.now().isoformat(),
     }
 
-@app.post("/api/login")
-async def login(req: LoginRequest):
-    user = USUARIOS.get(req.uid)
-    if not user or req.password != req.uid:
-        raise HTTPException(status_code=401, detail="Credenciales incorrectas")
-    token = create_token(req.uid, user["nombre"], user["rol"])
-    return {
-        "token": token,
-        "nombre": user["nombre"],
-        "rol": user["rol"],
-        "uid": req.uid,
-        "empresa": EMPRESA_ID,
-    }
+@app.post("/api/refresh")
+async def refresh_token(payload: dict = Depends(verify_token)):
+    token = create_token(
+        payload["uid"],
+        payload["nombre"],
+        payload["rol"]
+    )
+    return {"token": token}
 
 @app.get("/api/estado")
 async def get_estado(payload: dict = Depends(verify_token)):
